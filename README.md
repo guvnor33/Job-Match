@@ -1,5 +1,13 @@
 # JobScrape
 
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-web-000000?logo=flask&logoColor=white)
+![HTMX](https://img.shields.io/badge/HTMX-frontend-3366CC)
+![SQLite](https://img.shields.io/badge/SQLite-storage-003B57?logo=sqlite&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-scraping-2EAD33?logo=playwright&logoColor=white)
+![LLM](https://img.shields.io/badge/AI-Claude%20%7C%20local%20LLM-D97757)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+
 A personal job-listing aggregator. It pulls listings from **Gmail**, **LinkedIn**, and
 **company career pages** into a local SQLite database, then serves a lightweight web UI
 for browsing, application-tracking, and **AI-powered resume matching** — using either the
@@ -34,6 +42,43 @@ machine (except the calls you choose to make to the Claude API or your local mod
 
 ---
 
+## Engineering highlights
+
+Some of the more interesting problems solved in this project (the *why* behind the code,
+not just the *what*):
+
+- **Resilient LinkedIn scraping.** LinkedIn's logged-in results list is a virtualized,
+  recycled DOM that only renders ~9 of 25 cards at once, so extraction index-walks each
+  list shell and scrolls it into view to force a render, then paginates via `&start=N`.
+  The scraper is **click-driven**: it single-clicks each card to load the split-pane
+  detail view (the only place LinkedIn surfaces its free profile-match assessment) and
+  reads the description, Easy-Apply flag, and match text from that pane — scoping every
+  query to the pane to avoid false positives from the "similar jobs" cards.
+- **Cost-aware AI integration.** Strict URL-based deduplication guarantees the paid API
+  is never called twice for the same listing; a global kill-switch and per-backend
+  "already scored" checks give fine-grained control. The match assessment LinkedIn
+  provides for free is captured and stored so it can be used *instead of* paid scoring.
+- **Pluggable scoring backend.** The same prompt is dispatched to either the Claude API
+  or any local OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM). Local model
+  discovery, connection testing, and tolerant JSON parsing (local models are chattier)
+  are all handled. Claude and local scores are stored in separate columns for comparison.
+- **Concurrency done carefully.** Long-running scrapes and bulk re-scoring run in daemon
+  threads with HTMX status pollers that stop themselves cleanly; shared state is guarded
+  by locks with a deliberate no-reentrant-lock discipline (a self-deadlock bug and its
+  fix are documented in `CLAUDE.md`).
+- **Correct-by-construction stats.** Per-term match metrics use an association table with
+  a `UNIQUE(term, job_id)` constraint and are computed live from the DB, so re-running a
+  search term can never double-count a listing it already saw.
+- **Zero-build frontend.** Vanilla HTML/CSS + HTMX gives instant inline interactivity
+  (checkboxes, filters, live progress) with no JavaScript build pipeline.
+- **Self-healing schema.** Idempotent migrations run automatically on import, so the
+  database upgrades itself without manual steps.
+
+> 📒 `CLAUDE.md` contains a detailed engineering log — design decisions, bugs hit, and the
+> reasoning behind each fix — if you want to see how the project evolved.
+
+---
+
 ## Tech stack
 
 | Layer | Choice |
@@ -46,6 +91,32 @@ machine (except the calls you choose to make to the Claude API or your local mod
 | Gmail | Google Gmail API (OAuth2, read-only) |
 | AI matching | Claude API (`anthropic`) **or** any OpenAI-compatible local LLM |
 | Env / deps | [uv](https://docs.astral.sh/uv/) |
+
+---
+
+## Project structure
+
+```
+JobScrape/
+├── run.py                     # entry point — starts the Flask app
+├── scrapers/
+│   ├── gmail_scraper.py       # Gmail API ingestion (HTML-anchor parsing)
+│   ├── linkedin_scraper.py    # click-driven Playwright scraping
+│   ├── career_page_scraper.py # httpx + BeautifulSoup, Playwright fallback
+│   └── _config.py             # search_terms.toml read/write (tomllib + tomlkit)
+├── matching/
+│   └── resume_matcher.py      # Claude API + local-LLM scoring, prompt building
+├── db/
+│   ├── models.py              # thin SQLite layer (no ORM) + auto-migrations
+│   └── schema.sql             # table DDL
+├── web/
+│   ├── app.py                 # Flask routes, background-task orchestration
+│   ├── templates/             # Jinja + HTMX partials
+│   └── static/style.css
+├── app_settings.py            # runtime settings persistence (settings.toml)
+├── CLAUDE.md                  # engineering log / design decisions
+└── SETUP.md                   # full setup & operations guide
+```
 
 ---
 
@@ -111,6 +182,12 @@ jobscrape.db*  linkedin_session/        # your scraped data & login session
 ```
 
 The committed `*.example.*` files show the expected format without any of your data.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ---
 

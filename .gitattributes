@@ -1,0 +1,11 @@
+# Normalize line endings: store as LF in the repo, check out native on each OS.
+* text=auto eol=lf
+
+# Windows scripts keep CRLF
+*.bat text eol=crlf
+
+# Treat these as binary (no EOL/diff munging)
+*.db binary
+*.png binary
+*.jpg binary
+*.ico binary
