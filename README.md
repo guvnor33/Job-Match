@@ -44,8 +44,7 @@ machine (except the calls you choose to make to the Claude API or your local mod
 
 ## Engineering highlights
 
-Some of the more interesting problems solved in this project (the *why* behind the code,
-not just the *what*):
+Some of the more interesting problems solved in this project:
 
 - **Resilient LinkedIn scraping.** LinkedIn's logged-in results list is a virtualized,
   recycled DOM that only renders ~9 of 25 cards at once, so extraction index-walks each
