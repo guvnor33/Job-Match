@@ -1,0 +1,63 @@
+# ============================================================
+# JobScrape — search_terms.toml (EXAMPLE TEMPLATE)
+#
+# Copy this file to `search_terms.toml` and edit it with your own values.
+# The real `search_terms.toml` is gitignored so your personal search terms,
+# location, and company blacklist are never committed.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# [linkedin]  — used by the LinkedIn scraper
+#   location             : your city/region for LinkedIn's location filter
+#   remote_only          : true adds LinkedIn's Remote work-type filter (f_WT=2)
+#   max_results_per_term : how many listings to pull per search term
+#   search_terms         : each term is searched separately
+# ------------------------------------------------------------
+[linkedin]
+location = "Your City, Region"
+max_results_per_term = 25
+remote_only = true
+
+search_terms = [
+    "software engineer",
+    "backend developer",
+    "python developer",
+    # add your own terms…
+]
+
+
+# ------------------------------------------------------------
+# [gmail]  — used by the Gmail scraper
+#   subject_keywords : emails whose subject matches any keyword are scraped
+#   label_filter     : restrict to a Gmail label (blank = all mail)
+# ------------------------------------------------------------
+[gmail]
+label_filter = ""
+
+subject_keywords = [
+    "job alert",
+    "new job",
+    "hiring",
+    "opportunity",
+]
+
+
+# ------------------------------------------------------------
+# [blacklist]  — applied by ALL scrapers before storage/scoring
+#   title_patterns : drop listings whose TITLE contains any pattern (substring, case-insensitive)
+#   companies      : drop listings whose COMPANY contains any entry (junk/scam employers)
+# ------------------------------------------------------------
+[blacklist]
+title_patterns = [
+    "manage job alerts",
+    "view all jobs",
+    "unsubscribe",
+    "email preferences",
+    "privacy policy",
+    "easy apply",
+]
+
+companies = [
+    # "Some Junk Staffing Co",
+]

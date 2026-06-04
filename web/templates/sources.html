@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Career Pages — JobScrape{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Career Page Sources</h1>
+  <p>Add company job board URLs here. The scraper will check them on every run.</p>
+</div>
+
+<!-- Add new source form -->
+<form class="add-source-form"
+      hx-post="/sources/add"
+      hx-target="#sources-list"
+      hx-swap="innerHTML"
+      hx-on::after-request="this.reset()">
+  <input type="text"  name="company"  placeholder="Company name"         required>
+  <input type="url"   name="url"      placeholder="https://acme.com/jobs" required>
+  <input type="text"  name="selector" placeholder="CSS selector (optional)">
+  <button type="submit" class="btn-primary">Add</button>
+</form>
+
+<!-- Sources list (swapped by HTMX) -->
+<div id="sources-list">
+  {% include "_sources_list.html" %}
+</div>
+
+{% endblock %}

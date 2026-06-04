@@ -1,0 +1,59 @@
+{% if state.get("running") %}
+{# Canonical HTMX polling: this element replaces ITSELF via outerHTML every 2s.
+   While running it re-creates a fresh polling element; when the scrape finishes
+   the server returns the "done" block below (no hx-trigger), cleanly stopping. #}
+<div class="term-status running"
+     hx-get="/linkedin-term-status?term={{ term | urlencode }}&slug={{ slug }}"
+     hx-trigger="every 2s"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <div class="status-header">
+    <span class="spinner"></span>
+    {% if state.get("stopping") %}
+      <strong>Stopping…</strong>
+    {% else %}
+      <strong>Running…</strong>
+      <button class="btn-stop"
+              hx-post="/stop-linkedin-term"
+              hx-vals='{"term": "{{ term }}", "slug": "{{ slug }}"}'
+              hx-target="closest .term-status"
+              hx-swap="outerHTML">
+        ⏹ Stop
+      </button>
+    {% endif %}
+  </div>
+  <div class="scraper-log small-log">
+    {% for line in state.get("log", []) %}
+      <div class="log-line">{{ line }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% elif state.get("log") %}
+<div class="term-status done">
+  <div class="status-header">
+    <span class="done-icon">✓</span>
+    <strong>Done</strong>
+    {% if state.get("last_run") %}<span class="muted">— {{ state.last_run }}</span>{% endif %}
+    {% set c = state.get("counts", {}) %}
+    {% if c %}
+      <span class="count-chip" style="margin-left:.5rem">
+        {{ c.get("new", 0) }} new ({{ c.get("scored", 0) }} scored) ·
+        {{ c.get("existing", 0) }} existed ·
+        {{ c.get("reviewed", 0) }} reviewed
+      </span>
+    {% endif %}
+  </div>
+  <div class="scraper-log small-log">
+    {% for line in state.get("log", []) %}
+      <div class="log-line">{{ line }}</div>
+    {% endfor %}
+  </div>
+  <a href="/" class="btn-link" style="display:inline-block;margin-top:.5rem;font-size:12px;">
+    View listings →
+  </a>
+</div>
+
+{% else %}
+<div class="term-status idle"></div>
+{% endif %}

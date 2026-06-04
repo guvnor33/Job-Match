@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}LinkedIn Search Terms — JobScrape{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>LinkedIn Search Terms</h1>
+  <p>Each term is searched independently on LinkedIn. Click <strong>Scrape Now</strong> on any row to pull listings for that term only.</p>
+</div>
+
+<!-- Add new term -->
+<form class="add-term-form"
+      hx-post="/linkedin-terms/add"
+      hx-target="#terms-list"
+      hx-swap="innerHTML"
+      hx-on::after-request="this.reset()">
+  <input type="text" name="term" placeholder="e.g. Python engineer" required>
+  <button type="submit" class="btn-primary">+ Add term</button>
+</form>
+
+<!-- Terms list -->
+<div id="terms-list">
+  {% include "_linkedin_terms_list.html" %}
+</div>
+
+<!-- Company blacklist (global, all sources) -->
+<div class="blacklist-section">
+  <h2>Blacklisted Companies</h2>
+  <p class="blacklist-help">
+    Global blacklist of junk / scam / trap employers. Any listing whose
+    <strong>company</strong> name contains one of these (case-insensitive) is skipped
+    by <em>every</em> scraper — Gmail, LinkedIn, and career pages — before it is stored
+    or sent to the AI scorer, so it never costs you anything.
+  </p>
+
+  <form class="add-term-form"
+        hx-post="/company-blacklist/add"
+        hx-target="#company-blacklist"
+        hx-swap="innerHTML"
+        hx-on::after-request="this.reset()">
+    <input type="text" name="company" placeholder="e.g. Quik Hire Staffing" required>
+    <button type="submit" class="btn-primary">+ Blacklist company</button>
+  </form>
+
+  <div id="company-blacklist">
+    {% include "_company_blacklist.html" %}
+  </div>
+</div>
+
+{% endblock %}

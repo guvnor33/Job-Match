@@ -1,0 +1,22 @@
+.venv/
+jobscrape.db
+jobscrape.db-shm
+jobscrape.db-wal
+linkedin_runs.json
+settings.toml
+app_settings.json
+.env
+credentials.json
+token.json
+linkedin_session/
+resume.txt
+resume_old.txt
+resume_old2.txt
+resume*.txt
+__pycache__/
+*.pyc
+.playwright/
+.claude/settings.local.json
+
+# personal search terms / location / blacklist — use search_terms.example.toml as template
+search_terms.toml

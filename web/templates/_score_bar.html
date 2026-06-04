@@ -1,0 +1,7 @@
+<div class="score-bar-wrap large" title="{{ score }}/100">
+  <div class="score-bar {{ color }}" style="width:{{ score }}%"></div>
+  <span class="score-label">{{ score }}/100</span>
+</div>
+{% if reason %}
+<p class="score-reason">{{ reason }}</p>
+{% endif %}

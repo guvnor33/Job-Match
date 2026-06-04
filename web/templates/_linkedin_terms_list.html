@@ -1,0 +1,100 @@
+{% if not terms %}
+  <p class="empty">No search terms yet. Add one above.</p>
+{% else %}
+  <div class="terms-list">
+    {% for term in terms %}
+      {% set state = states.get(term, {}) %}
+      {% set run = runs.get(term) %}
+      {% set slug = loop.index %}
+      <div class="term-card">
+        <div class="term-card-header">
+
+          <span class="term-name">{{ term }}</span>
+
+          <div class="term-controls">
+            <label class="term-param-label">
+              Look back
+              <input type="number" id="hours-{{ slug }}" value="{{ defaults.lookback_hours }}"
+                     min="1" max="720" style="width:4rem">
+              <span class="unit">hrs</span>
+            </label>
+            <label class="term-param-label">
+              Max results
+              <input type="number" id="max-{{ slug }}" value="{{ defaults.max_results }}"
+                     min="1" max="200" style="width:4rem">
+            </label>
+
+            <button class="btn-scrape-term"
+                    hx-post="/scrape-linkedin-term"
+                    hx-vals='js:{
+                      "term":        "{{ term | e }}",
+                      "hours":       document.getElementById("hours-{{ slug }}").value,
+                      "max_results": document.getElementById("max-{{ slug }}").value,
+                      "slug":        "{{ slug }}"
+                    }'
+                    hx-target="#term-status-{{ slug }}"
+                    hx-swap="innerHTML"
+                    {% if state.get("running") %}disabled{% endif %}>
+              ▶ Scrape now
+            </button>
+
+            <button class="btn-danger"
+                    hx-post="/linkedin-terms/delete"
+                    hx-vals='{"term": "{{ term | e }}"}'
+                    hx-target="#terms-list"
+                    hx-swap="innerHTML"
+                    hx-confirm="Remove '{{ term }}' from the list?">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Lifetime stats, right-aligned under the header -->
+        <div class="term-last-run-row">
+          {% if run and run.get("totals") %}
+            {% set t = run.totals %}
+            {% set st = stats.get(term, {}) %}
+            {% set avg = st.get("avg_score") %}
+            {% set median = st.get("median_score") %}
+            {% set lo = st.get("min_score") %}
+            {% set hi = st.get("max_score") %}
+            {% set found = st.get("distinct_found", 0) %}
+            <div class="term-stats">
+              {% if avg is not none %}
+                <span class="term-avg score-{{ 'green' if avg >= 70 else 'yellow' if avg >= 40 else 'red' }}">
+                  avg match {{ avg | round(0) | int }}
+                </span>
+                <span class="term-score-spread">
+                  median {{ median | round(0) | int }}
+                  · low {{ lo }}
+                  · high {{ hi }}
+                </span>
+              {% endif %}
+              <span class="term-stat-detail">
+                {{ found }} distinct job{{ 's' if found != 1 else '' }} found
+                over {{ run.run_count }} run{{ 's' if run.run_count != 1 else '' }}
+                · <strong>{{ t.get("new", 0) }}</strong> new
+                · {{ t.get("existing", 0) }} existing
+                · {{ t.get("blacklisted", 0) }} skipped
+                {% if t.get("reviewed", 0) %}· {{ t.get("reviewed", 0) }} reviewed{% endif %}
+              </span>
+              <span class="term-last-run">last run {{ run.last_run }}</span>
+            </div>
+          {% else %}
+            <span class="term-last-run never">Never run</span>
+          {% endif %}
+        </div>
+
+        <!-- Stable status wrapper — only innerHTML ever changes -->
+        <div id="term-status-{{ slug }}">
+          {% if state %}
+            {% with slug=slug %}
+              {% include "_term_scrape_status.html" %}
+            {% endwith %}
+          {% endif %}
+        </div>
+
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

@@ -1,0 +1,19 @@
+{% if not companies %}
+  <p class="empty">No blacklisted companies. Add one above to skip all of its listings.</p>
+{% else %}
+  <ul class="blacklist-companies">
+    {% for company in companies %}
+      <li class="blacklist-company">
+        <span class="blacklist-company-name">{{ company }}</span>
+        <button class="btn-danger"
+                hx-post="/company-blacklist/delete"
+                hx-vals='{"company": "{{ company | e }}"}'
+                hx-target="#company-blacklist"
+                hx-swap="innerHTML"
+                hx-confirm="Un-blacklist '{{ company }}'?">
+          ✕
+        </button>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

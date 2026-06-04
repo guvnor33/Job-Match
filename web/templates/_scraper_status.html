@@ -1,0 +1,69 @@
+{% if state.running %}
+<div class="status-panel running"
+     hx-get="/scraper-status"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+  <div class="status-header">
+    <span class="spinner"></span>
+    <strong>Running…</strong>
+    <button class="btn-stop"
+            hx-post="/stop-scrapers"
+            hx-target="#scraper-status"
+            hx-swap="innerHTML">
+      ⏹ Stop
+    </button>
+  </div>
+  <div class="scraper-log">
+    {% for line in state.log %}
+      <div class="log-line">{{ line }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% elif state.log %}
+<div class="status-panel {{ 'stopped' if state.stopped else 'done' }}">
+  <div class="status-header">
+    {% if state.stopped %}
+      <span class="stopped-icon">⏹</span>
+      <strong>Stopped</strong>
+    {% else %}
+      <span class="done-icon">✓</span>
+      <strong>Done</strong>
+    {% endif %}
+    {% if state.last_run %}<span class="muted">— {{ state.last_run }}</span>{% endif %}
+  </div>
+  {% if state.counts %}
+  <div class="counts-row">
+    {% for source, c in state.counts.items() %}
+      <span class="count-chip">
+        <strong>{{ source }}</strong> —
+        {% if c.new is defined %}
+          {{ c.new }} new ({{ c.scored }} scored)
+          {% if c.existing %} · {{ c.existing }} existed{% endif %}
+          {% if c.reviewed %} · {{ c.reviewed }} reviewed{% endif %}
+          {% if c.blacklisted %} · {{ c.blacklisted }} skipped{% endif %}
+        {% else %}
+          {{ c }}
+        {% endif %}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="scraper-log">
+    {% for line in state.log %}
+      <div class="log-line">{{ line }}</div>
+    {% endfor %}
+  </div>
+  <a href="/" class="btn-primary" style="display:inline-block;margin-top:.75rem">
+    View listings →
+  </a>
+</div>
+
+{% else %}
+<div class="status-panel idle">
+  <span class="muted">No scrape run yet this session.</span>
+  {% if state.last_run %}
+    <span class="muted"> Last run: {{ state.last_run }}</span>
+  {% endif %}
+</div>
+{% endif %}

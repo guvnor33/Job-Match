@@ -1,0 +1,25 @@
+{% if st.get("empty") %}
+  <span class="muted">No jobs selected — tick some checkboxes first.</span>
+{% elif st.running %}
+  <span class="rescore-progress"
+        hx-get="/jobs/rescore-status"
+        hx-trigger="every 2s"
+        hx-target="#rescore-status"
+        hx-swap="innerHTML">
+    <span class="spinner"></span>
+    Rescoring {{ st.done }}/{{ st.total }} with
+    {{ 'local LLM' if st.backend == 'local' else 'Claude API' }}…
+    <button type="button" class="btn-danger"
+            hx-post="/jobs/bulk-rescore/stop"
+            hx-target="#rescore-status" hx-swap="innerHTML">Stop</button>
+  </span>
+{% elif st.total %}
+  <span class="rescore-done">
+    Done — {{ st.ok }} scored{% if st.fail %}, {{ st.fail }} failed{% endif %}
+    ({{ 'local LLM' if st.backend == 'local' else 'Claude API' }}).
+    {% if st.fail and st.last_error %}
+      <span class="rescore-err">Last error: {{ st.last_error }}</span>
+    {% endif %}
+    <button type="button" class="btn-secondary" onclick="location.reload()">Refresh listings</button>
+  </span>
+{% endif %}

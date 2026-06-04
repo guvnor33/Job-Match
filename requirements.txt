@@ -1,0 +1,13 @@
+flask>=3.0
+tomlkit>=0.12
+htmx                          # served via CDN, not pip — listed for reference
+httpx>=0.27
+beautifulsoup4>=4.12
+playwright>=1.44
+google-api-python-client>=2.130
+google-auth-httplib2>=0.2
+google-auth-oauthlib>=1.2
+apscheduler>=3.10
+anthropic>=0.28
+python-dotenv>=1.0
+pyyaml>=6.0

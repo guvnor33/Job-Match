@@ -1,0 +1,33 @@
+{% if error %}
+  <p class="error">⚠ {{ error }}</p>
+{% elif not emails %}
+  <p class="muted">No matching job emails found in the last {{ days }} days.</p>
+{% else %}
+  <p class="muted" style="margin-bottom:.5rem">
+    {{ emails|length }} email{{ 's' if emails|length != 1 else '' }} found
+    {% if loaded_at %}<span>· loaded at {{ loaded_at }}</span>{% endif %}
+    — click Scrape to extract jobs from any of them.
+  </p>
+  <table class="email-list-table">
+    <thead>
+      <tr><th>Subject</th><th>From</th><th>Date</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for email in emails %}
+      <tr id="email-row-{{ email.id }}">
+        <td>{{ email.subject[:80] }}{% if email.subject|length > 80 %}…{% endif %}</td>
+        <td class="muted">{{ email.sender[:40] }}{% if email.sender|length > 40 %}…{% endif %}</td>
+        <td class="muted date-cell">{{ email.date[:16] }}</td>
+        <td>
+          <button class="btn-secondary"
+                  hx-post="/scrape-email/{{ email.id }}"
+                  hx-target="#email-row-{{ email.id }}"
+                  hx-swap="innerHTML">
+            Scrape
+          </button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

@@ -1,0 +1,16 @@
+<datalist id="model-options">
+  {% for m in models %}<option value="{{ m|e }}"></option>{% endfor %}
+</datalist>
+<span class="test-result ok">
+  Found {{ models|length }}: {{ models|join(', ') }}
+  {%- if models|length > 1 %} — click the Model field to pick one{% endif %}
+</span>
+<script>
+(function () {
+  var input = document.querySelector('input[name="local_model"]');
+  if (!input) return;
+  input.setAttribute('list', 'model-options');
+  // Only fill when the field is EMPTY — never overwrite a name that already works.
+  if (!input.value.trim()) input.value = {{ first|tojson }};
+})();
+</script>

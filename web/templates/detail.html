@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title or 'Job' }} — JobScrape{% endblock %}
+{% block content %}
+
+<div class="detail-header">
+  <a href="/" class="back-link">← Back to listings</a>
+  <h1>{{ job.title or '(untitled)' }}</h1>
+  <div class="detail-meta">
+    <span>{{ job.company or 'Unknown company' }}</span>
+    {% if job.location %}<span>📍 {{ job.location }}</span>{% endif %}
+    <span class="source-badge source-{{ job.source }}">{{ job.source }}</span>
+    {% if job.url %}<a href="{{ job.url }}" target="_blank" rel="noopener">Open listing ↗</a>{% endif %}
+  </div>
+</div>
+
+<!-- Status toggles -->
+<div class="status-toggles">
+  <label class="applied-toggle">
+    <input type="checkbox" {% if job.applied %}checked{% endif %}
+      hx-post="/jobs/{{ job.id }}/toggle-applied"
+      hx-swap="outerHTML">
+    Applied
+  </label>
+  <label class="applied-toggle">
+    <input type="checkbox" {% if job.response_received %}checked{% endif %}
+      hx-post="/jobs/{{ job.id }}/toggle-response"
+      hx-swap="outerHTML">
+    Response received
+  </label>
+  <label class="applied-toggle" style="color: {% if job.expired %}#dc2626{% else %}inherit{% endif %}">
+    <input type="checkbox" {% if job.expired %}checked{% endif %}
+      hx-post="/jobs/{{ job.id }}/toggle-expired"
+      hx-swap="outerHTML">
+    Listing expired
+  </label>
+</div>
+
+<!-- Match scores: Claude API and local LLM, kept separate -->
+<section class="match-section">
+  <h2>Resume Match — Claude API</h2>
+  <div id="score-block-claude">
+    {% if job.match_score is not none %}
+      {% with score=job.match_score, color=job.score_color, reason=job.match_reason %}
+        {% include "_score_bar.html" %}
+      {% endwith %}
+    {% else %}
+      <p class="unscored-label">Not yet scored by Claude.</p>
+    {% endif %}
+  </div>
+  <button hx-post="/jobs/{{ job.id }}/rescore" hx-vals='{"backend":"claude"}'
+          hx-target="#score-block-claude" hx-swap="innerHTML"
+          class="btn-secondary">
+    Re-score with Claude API
+  </button>
+
+  <h2 style="margin-top:1.25rem">Resume Match — Local LLM</h2>
+  <div id="score-block-local">
+    {% if job.local_score is not none %}
+      {% with score=job.local_score, color=job.local_color, reason=job.local_reason %}
+        {% include "_score_bar.html" %}
+      {% endwith %}
+    {% else %}
+      <p class="unscored-label">Not yet scored by local LLM.</p>
+    {% endif %}
+  </div>
+  <button hx-post="/jobs/{{ job.id }}/rescore" hx-vals='{"backend":"local"}'
+          hx-target="#score-block-local" hx-swap="innerHTML"
+          class="btn-secondary">
+    Re-score with local LLM
+  </button>
+
+  {% if job.li_match %}
+    <p class="li-match-detail">
+      <strong>LinkedIn's assessment:</strong> {{ job.li_match }}
+      {% if job.easy_apply %}<span class="easy-apply-badge" style="margin-left:.5rem">⚡ Easy Apply</span>{% endif %}
+    </p>
+  {% endif %}
+</section>
+
+<!-- Location (editable) -->
+<section class="notes-section">
+  <h2>Location</h2>
+  <form hx-post="/jobs/{{ job.id }}/location" hx-swap="outerHTML" hx-target="#location-saved">
+    <input type="text" name="location" value="{{ job.location or '' }}"
+           placeholder="e.g. Copenhagen, Denmark (Remote)"
+           style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;margin-bottom:.5rem">
+    <button type="submit" class="btn-primary">Save</button>
+    <span id="location-saved"></span>
+  </form>
+</section>
+
+<!-- Notes -->
+<section class="notes-section">
+  <h2>Notes</h2>
+  <form hx-post="/jobs/{{ job.id }}/notes" hx-swap="outerHTML" hx-target="#notes-saved">
+    <textarea name="notes" rows="4" placeholder="Your notes…">{{ job.notes or '' }}</textarea>
+    <button type="submit" class="btn-primary">Save notes</button>
+    <span id="notes-saved"></span>
+  </form>
+</section>
+
+<!-- Description -->
+{% if job.description %}
+<section class="description-section">
+  <h2>Description</h2>
+  <pre class="description-body">{{ job.description }}</pre>
+</section>
+{% endif %}
+
+{% endblock %}

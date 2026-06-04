@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Listings — JobScrape{% endblock %}
+{% block content %}
+
+{% macro sort_url(col, default_dir="DESC") %}
+  {%- set new_dir = "ASC" if (sort_col == col and sort_dir == "DESC") else ("DESC" if (sort_col == col and sort_dir == "ASC") else default_dir) -%}
+  /?sort={{ col }}+{{ new_dir }}&applied={{ applied_filter }}&response={{ response_filter }}&expired={{ expired_filter }}&hidden={{ hidden_filter }}&li_match={{ li_match_filter }}&min_score={{ min_score or "" }}
+{%- endmacro %}
+
+{% macro sort_header(col, label, default_dir="DESC") %}
+  <th class="sortable {% if sort_col == col %}sorted{% endif %}">
+    <a href="{{ sort_url(col, default_dir) }}">
+      {{ label }}
+      {% if sort_col == col %}
+        {{ "▼" if sort_dir == "DESC" else "▲" }}
+      {% else %}
+        <span class="sort-hint">⇅</span>
+      {% endif %}
+    </a>
+  </th>
+{% endmacro %}
+
+<div class="page-header">
+  <div class="page-header-row">
+    <h1>Job Listings</h1>
+    <span class="record-count">{{ jobs|length }} listing{{ 's' if jobs|length != 1 else '' }}</span>
+  </div>
+
+  <form class="filters" method="get" action="/">
+    <input type="hidden" name="sort" value="{{ sort }}">
+
+    <label>
+      Applied
+      <select name="applied" onchange="this.form.submit()">
+        <option value="">All</option>
+        <option value="no"  {% if applied_filter == 'no'  %}selected{% endif %}>Not applied</option>
+        <option value="yes" {% if applied_filter == 'yes' %}selected{% endif %}>Applied</option>
+      </select>
+    </label>
+
+    <label>
+      Response
+      <select name="response" onchange="this.form.submit()">
+        <option value="">All</option>
+        <option value="no"  {% if response_filter == 'no'  %}selected{% endif %}>No response</option>
+        <option value="yes" {% if response_filter == 'yes' %}selected{% endif %}>Response received</option>
+      </select>
+    </label>
+
+    <label>
+      Expired
+      <select name="expired" onchange="this.form.submit()">
+        <option value="no"  {% if expired_filter == 'no'  %}selected{% endif %}>Hide expired</option>
+        <option value="all" {% if expired_filter == 'all' %}selected{% endif %}>Show all</option>
+        <option value="yes" {% if expired_filter == 'yes' %}selected{% endif %}>Expired only</option>
+      </select>
+    </label>
+
+    <label>
+      Hidden
+      <select name="hidden" onchange="this.form.submit()">
+        <option value="no"  {% if hidden_filter == 'no'  %}selected{% endif %}>Hide hidden</option>
+        <option value="all" {% if hidden_filter == 'all' %}selected{% endif %}>Show all</option>
+        <option value="yes" {% if hidden_filter == 'yes' %}selected{% endif %}>Hidden only</option>
+      </select>
+    </label>
+
+    <label>
+      LinkedIn match
+      <select name="li_match" onchange="this.form.submit()">
+        <option value=""        {% if li_match_filter == ''        %}selected{% endif %}>All</option>
+        <option value="well"    {% if li_match_filter == 'well'    %}selected{% endif %}>Strong (matches well)</option>
+        <option value="several" {% if li_match_filter == 'several' %}selected{% endif %}>Several qualifications</option>
+        <option value="some"    {% if li_match_filter == 'some'    %}selected{% endif %}>Some qualifications</option>
+        <option value="missing" {% if li_match_filter == 'missing' %}selected{% endif %}>Missing qualifications</option>
+        <option value="any"     {% if li_match_filter == 'any'     %}selected{% endif %}>Has any assessment</option>
+        <option value="none"    {% if li_match_filter == 'none'    %}selected{% endif %}>No assessment</option>
+      </select>
+    </label>
+
+    <label>
+      Min match %
+      <input type="number" name="min_score" min="0" max="100" value="{{ min_score or '' }}"
+             placeholder="0" style="width:4rem" onchange="this.form.submit()">
+    </label>
+  </form>
+
+  <!-- Bulk actions: select rows, then re-score them with a chosen engine -->
+  <div class="bulk-actions">
+    <span class="bulk-count"><strong id="sel-count">0</strong> selected</span>
+    <span class="bulk-label">Re-score selected with:</span>
+    <button type="button" class="btn-secondary"
+            hx-post="/jobs/bulk-rescore" hx-vals='{"backend":"local"}'
+            hx-include="#bulk-form" hx-target="#rescore-status" hx-swap="innerHTML">
+      Local LLM
+    </button>
+    <button type="button" class="btn-secondary"
+            hx-post="/jobs/bulk-rescore" hx-vals='{"backend":"claude"}'
+            hx-include="#bulk-form" hx-target="#rescore-status" hx-swap="innerHTML">
+      Claude API
+    </button>
+    <span id="rescore-status" class="rescore-status"></span>
+  </div>
+</div>
+
+<form id="bulk-form">
+<table class="listings-table">
+  <thead>
+    <tr>
+      <th title="Select"><input type="checkbox" id="select-all"></th>
+      <th title="Applied">App</th>
+      <th title="Response received">Resp</th>
+      <th title="Listing expired">Exp</th>
+      <th title="Hidden — junk / scam / broken">Hide</th>
+      {{ sort_header("easy_apply", "Easy Apply", "DESC") }}
+      {{ sort_header("match_score", "Match (Claude)", "DESC") }}
+      {{ sort_header("local_score", "Match (Local)", "DESC") }}
+      {{ sort_header("li_match", "LinkedIn Match", "DESC") }}
+      {{ sort_header("title", "Title", "ASC") }}
+      {{ sort_header("company", "Company", "ASC") }}
+      {{ sort_header("location", "Location", "ASC") }}
+      {{ sort_header("source", "Source", "ASC") }}
+      {{ sort_header("fetched_at", "Fetched", "DESC") }}
+    </tr>
+  </thead>
+  <tbody>
+  {% for job in jobs %}
+    <tr class="listing-row {{ job.score_color }} {% if job.expired %}row-expired{% endif %} {% if job.hidden %}row-hidden{% endif %}">
+      <td class="select-cell">
+        <input type="checkbox" class="row-select" name="job_ids" value="{{ job.id }}">
+      </td>
+      <td class="applied-cell">
+        <input type="checkbox" {% if job.applied %}checked{% endif %}
+          hx-post="/jobs/{{ job.id }}/toggle-applied"
+          hx-swap="outerHTML"
+          title="Mark as applied">
+      </td>
+      <td class="applied-cell">
+        <input type="checkbox" {% if job.response_received %}checked{% endif %}
+          hx-post="/jobs/{{ job.id }}/toggle-response"
+          hx-swap="outerHTML"
+          title="Response received">
+      </td>
+      <td class="applied-cell">
+        <input type="checkbox" {% if job.expired %}checked{% endif %}
+          hx-post="/jobs/{{ job.id }}/toggle-expired"
+          hx-swap="outerHTML"
+          title="Listing expired — no longer accepting applications">
+      </td>
+      <td class="applied-cell">
+        <input type="checkbox" {% if job.hidden %}checked{% endif %}
+          hx-post="/jobs/{{ job.id }}/toggle-hidden"
+          hx-swap="outerHTML"
+          title="Hide listing — junk / scam / broken link (kept in DB, won't be re-added)">
+      </td>
+      <td class="easy-apply-cell">
+        {% if job.easy_apply %}
+          <span class="easy-apply-badge" title="Easy Apply — one-click apply on LinkedIn">⚡ Easy</span>
+        {% else %}
+          <span class="unscored-label">—</span>
+        {% endif %}
+      </td>
+      <td class="score-cell">
+        {% if job.match_score is not none %}
+          <div class="score-bar-wrap" title="{{ job.match_score }}/100">
+            <div class="score-bar {{ job.score_color }}" style="width:{{ job.match_score }}%"></div>
+            <span class="score-label">{{ job.match_score }}</span>
+          </div>
+          {% if job.match_reason %}
+            <div class="score-reason-inline" title="{{ job.match_reason }}">
+              {{ job.match_reason[:220] }}{% if job.match_reason|length > 220 %}…{% endif %}
+            </div>
+          {% endif %}
+        {% else %}
+          <span class="unscored-label">—</span>
+        {% endif %}
+      </td>
+      <td class="score-cell">
+        {% if job.local_score is not none %}
+          <div class="score-bar-wrap" title="{{ job.local_score }}/100 (local LLM)">
+            <div class="score-bar {{ job.local_color }}" style="width:{{ job.local_score }}%"></div>
+            <span class="score-label">{{ job.local_score }}</span>
+          </div>
+          {% if job.local_reason %}
+            <div class="score-reason-inline" title="{{ job.local_reason }}">
+              {{ job.local_reason[:220] }}{% if job.local_reason|length > 220 %}…{% endif %}
+            </div>
+          {% endif %}
+        {% else %}
+          <span class="unscored-label">—</span>
+        {% endif %}
+      </td>
+      <td class="li-match-cell">
+        {% if job.li_badge.label %}
+          <span class="li-match-badge li-{{ job.li_badge.tier }}" title="{{ job.li_match }}">
+            {{ job.li_badge.label }}
+          </span>
+        {% else %}
+          <span class="unscored-label">—</span>
+        {% endif %}
+      </td>
+      <td><a href="/jobs/{{ job.id }}">{{ job.title or '(untitled)' }}</a></td>
+      <td>{{ job.company or '—' }}</td>
+      <td>{{ job.location or '—' }}</td>
+      <td><span class="source-badge source-{{ job.source }}">{{ job.source }}</span></td>
+      <td class="date-cell">
+        {{ job.fetched_at[:10] }}<br>
+        <span class="time-part">{{ job.fetched_at[11:16] }}</span>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="14" class="empty">No listings match the current filters.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</form>
+
+<script>
+(function () {
+  const countEl = document.getElementById('sel-count');
+  const selectAll = document.getElementById('select-all');
+  const boxes = () => Array.from(document.querySelectorAll('.row-select'));
+  function refresh() {
+    if (countEl) countEl.textContent = boxes().filter(b => b.checked).length;
+  }
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'select-all') {
+      boxes().forEach(b => { b.checked = selectAll.checked; });
+    }
+    if (e.target && (e.target.classList.contains('row-select') || e.target.id === 'select-all')) {
+      refresh();
+    }
+  });
+  refresh();
+})();
+</script>
+
+{% endblock %}

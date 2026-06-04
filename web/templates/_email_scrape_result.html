@@ -1,0 +1,12 @@
+{% if error %}
+  <td colspan="4" class="error">⚠ {{ error }}</td>
+{% elif count == 0 %}
+  <td colspan="4" class="muted">No job listings found in this email.</td>
+{% else %}
+  <td colspan="3">
+    <span class="done-icon">✓</span>
+    <strong>{{ count }} listing{{ 's' if count != 1 else '' }} added:</strong>
+    {{ titles | join(", ") }}
+  </td>
+  <td><a href="/" class="btn-link">View →</a></td>
+{% endif %}

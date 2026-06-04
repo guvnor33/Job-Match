@@ -1,0 +1,87 @@
+<div id="scoring-settings" class="scoring-toggle {{ 'on' if s.scoring_enabled else 'off' }}">
+
+  <!-- Master on/off (instant) -->
+  <label class="scoring-toggle-label">
+    <input type="checkbox" name="scoring_enabled"
+           {% if s.scoring_enabled %}checked{% endif %}
+           hx-post="/settings/toggle-scoring"
+           hx-trigger="change"
+           hx-target="#scoring-settings"
+           hx-swap="outerHTML">
+    <span class="scoring-toggle-text">
+      AI resume scoring: <strong>{{ 'ON' if s.scoring_enabled else 'OFF' }}</strong>
+    </span>
+  </label>
+  <span class="scoring-toggle-hint">
+    {% if s.scoring_enabled %}
+      New jobs are scored on ingest using the engine below.
+    {% else %}
+      Scraping runs without scoring. Listings ingest unscored.
+    {% endif %}
+  </span>
+
+  <!-- Scoring engine: Claude API vs local LLM -->
+  <form class="scoring-backend-form"
+        hx-post="/settings/scoring-backend"
+        hx-target="#scoring-settings"
+        hx-swap="outerHTML">
+    <label class="scoring-engine-label">
+      Scoring engine
+      <select name="scoring_backend"
+              onchange="this.closest('form').querySelector('.local-fields').style.display = (this.value==='local') ? 'flex' : 'none'">
+        <option value="claude" {% if s.scoring_backend == 'claude' %}selected{% endif %}>Claude API (paid)</option>
+        <option value="local"  {% if s.scoring_backend == 'local'  %}selected{% endif %}>Local LLM (free, on your machine)</option>
+      </select>
+    </label>
+
+    <div class="local-fields" style="display: {{ 'flex' if s.scoring_backend == 'local' else 'none' }}">
+      <label>
+        Base URL
+        <input type="text" name="local_base_url" value="{{ s.local_base_url }}"
+               placeholder="http://localhost:11434/v1" style="width:18rem">
+      </label>
+      <label>
+        Model
+        <input type="text" name="local_model" value="{{ s.local_model }}"
+               placeholder="llama3.1" style="width:12rem"
+               list="model-options" autocomplete="off">
+        <datalist id="model-options"></datalist>
+      </label>
+      <button type="button" class="btn-secondary"
+              hx-post="/settings/detect-models"
+              hx-include="closest form"
+              hx-target="#model-detect-result"
+              hx-swap="innerHTML">
+        Detect model
+      </button>
+      <span id="model-detect-result" class="test-result"></span>
+      <button type="button" class="btn-secondary"
+              hx-post="/settings/test-local"
+              hx-include="closest form"
+              hx-target="#local-test-result"
+              hx-swap="outerHTML">
+        Test connection
+      </button>
+      <span id="local-test-result" class="test-result"></span>
+    </div>
+
+    <label class="scoring-engine-label">
+      Feedback detail
+      <select name="rationale_detail">
+        <option value="brief"    {% if s.rationale_detail == 'brief'    %}selected{% endif %}>Brief — 1–2 sentences</option>
+        <option value="standard" {% if s.rationale_detail == 'standard' %}selected{% endif %}>Standard — 2–3 sentences</option>
+        <option value="detailed" {% if s.rationale_detail == 'detailed' %}selected{% endif %}>Detailed — names specific missing skills</option>
+      </select>
+    </label>
+
+    <div class="scoring-backend-actions">
+      <button type="submit" class="btn-primary">Save scoring engine</button>
+      {% if saved %}<span class="muted">Saved ✓</span>{% endif %}
+    </div>
+    <p class="scoring-engine-hint">
+      Local LLM must expose an OpenAI-compatible <code>/v1/chat/completions</code>
+      endpoint (Ollama, LM Studio, llama.cpp, vLLM). Scoring with a local model is free
+      — no API cost.
+    </p>
+  </form>
+</div>

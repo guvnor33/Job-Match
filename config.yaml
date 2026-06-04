@@ -1,0 +1,14 @@
+linkedin:
+  lookback_hours: 24         # default lookback window (overridable in the UI)
+  # search_terms, location, remote_only, max_results → edit search_terms.toml
+
+gmail:
+  lookback_days: 7           # default lookback window (overridable in the UI)
+  # subject_keywords, label_filter → edit search_terms.toml
+
+career_pages: []              # managed via the web UI at /sources
+
+matching:
+  enabled: true
+  model: "claude-opus-4-5"
+  auto_score_on_ingest: true

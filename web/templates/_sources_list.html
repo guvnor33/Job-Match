@@ -1,0 +1,41 @@
+{% if sources %}
+<table class="sources-table">
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th>URL</th>
+      <th>Selector</th>
+      <th>Active</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for src in sources %}
+    <tr class="{{ 'inactive' if not src.active else '' }}">
+      <td>{{ src.company }}</td>
+      <td><a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.url }}</a></td>
+      <td>{{ src.selector or '—' }}</td>
+      <td>
+        <button class="btn-toggle"
+                hx-post="/sources/{{ src.id }}/toggle"
+                hx-target="#sources-list"
+                hx-swap="innerHTML">
+          {{ 'Active' if src.active else 'Inactive' }}
+        </button>
+      </td>
+      <td>
+        <button class="btn-danger"
+                hx-post="/sources/{{ src.id }}/delete"
+                hx-target="#sources-list"
+                hx-swap="innerHTML"
+                hx-confirm="Delete {{ src.company }}?">
+          Delete
+        </button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="empty">No sources yet. Add one above.</p>
+{% endif %}

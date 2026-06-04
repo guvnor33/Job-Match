@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Run Scrapers — JobScrape{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Run Scrapers</h1>
+  <p>Choose which sources to scrape and how far back to look, then click Run.</p>
+</div>
+
+<!-- Scoring settings: on/off + engine (Claude API or local LLM). Applies everywhere. -->
+{% include "_scoring_settings.html" %}
+
+<!-- ── Bulk scraper ─────────────────────────────────────────── -->
+<form class="run-form"
+      hx-post="/run-scrapers"
+      hx-target="#scraper-status"
+      hx-swap="innerHTML">
+
+  <div class="scraper-options">
+
+    <!-- Gmail -->
+    <div class="scraper-card">
+      <label class="scraper-toggle">
+        <input type="checkbox" name="gmail" checked>
+        <span class="scraper-name">Gmail</span>
+      </label>
+      <div class="scraper-params">
+        <label>
+          Look back
+          <div class="input-row">
+            <input type="number" name="gmail_days" value="{{ default_gmail_days }}"
+                   min="1" max="365" style="width:5rem">
+            <span class="unit">days</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- LinkedIn -->
+    <div class="scraper-card">
+      <label class="scraper-toggle">
+        <input type="checkbox" name="linkedin" checked>
+        <span class="scraper-name">LinkedIn</span>
+      </label>
+      <div class="scraper-params">
+        <label>
+          Look back
+          <div class="input-row">
+            <input type="number" name="linkedin_hours" value="{{ default_li_hours }}"
+                   min="1" max="720" style="width:5rem">
+            <span class="unit">hours</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Career pages -->
+    <div class="scraper-card">
+      <label class="scraper-toggle">
+        <input type="checkbox" name="career" checked>
+        <span class="scraper-name">Career Pages</span>
+      </label>
+      <div class="scraper-params">
+        <span class="unit muted">Scrapes current listings<br>(no date filter)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <button type="submit" class="btn-run" {% if state.running %}disabled{% endif %}>
+    ▶ Run now
+  </button>
+
+</form>
+
+<hr class="section-divider">
+
+<!-- ── Single email scraper ────────────────────────────────── -->
+<div class="single-email-card">
+  <h2>Scrape a specific email</h2>
+  <p>Load your recent job emails and click <strong>Scrape</strong> on any you want to process.</p>
+  <div class="single-email-controls">
+    <label style="font-size:13px;color:#64748b;">
+      Look back
+      <input type="number" id="email-days" value="{{ email_cache.days }}" min="1" max="90"
+             style="width:4rem;margin:0 4px;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;">
+      days
+    </label>
+    <button class="btn-primary"
+            hx-get="/email-list"
+            hx-vals='js:{"days": document.getElementById("email-days").value}'
+            hx-target="#email-list-panel"
+            hx-swap="innerHTML"
+            hx-indicator="#email-list-spinner">
+      Load emails
+    </button>
+    <span id="email-list-spinner" class="spinner htmx-indicator"></span>
+    {% if email_cache.loaded_at %}
+      <span class="muted">Last loaded {{ email_cache.loaded_at }}</span>
+    {% endif %}
+  </div>
+  <div id="email-list-panel" style="margin-top:.75rem">
+    {% if email_cache.emails %}
+      {% with emails=email_cache.emails, days=email_cache.days, loaded_at=email_cache.loaded_at, error=None %}
+        {% include "_email_list.html" %}
+      {% endwith %}
+    {% endif %}
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ── Scrape status log ────────────────────────────────────── -->
+<div id="scraper-status">
+  {% include "_scraper_status.html" %}
+</div>
+
+{% endblock %}
