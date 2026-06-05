@@ -27,6 +27,9 @@ from db.models import (
 )
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+# Reload templates when their files change, so HTML/CSS tweaks show up on a plain
+# browser refresh without restarting the server. (Python changes still need a restart.)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Persistent per-term run history (survives app restarts)
 import json

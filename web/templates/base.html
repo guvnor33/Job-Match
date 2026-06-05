@@ -9,14 +9,30 @@
 </head>
 <body>
   <nav>
-    <a href="/" class="nav-brand">JobScrape</a>
-    <a href="/">Listings</a>
-    <a href="/run">Run Scrapers</a>
-    <a href="/linkedin-terms">LinkedIn Terms</a>
-    <a href="/sources">Career Pages</a>
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">💼 JobScrape</a>
+      <a href="/" class="{{ 'active' if request.path == '/' }}">Listings</a>
+      <a href="/run" class="{{ 'active' if request.path.startswith('/run') }}">Run Scrapers</a>
+      <a href="/linkedin-terms" class="{{ 'active' if request.path.startswith('/linkedin-terms') }}">LinkedIn Terms</a>
+      <a href="/sources" class="{{ 'active' if request.path.startswith('/sources') }}">Career Pages</a>
+    </div>
   </nav>
   <main>
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    // Keep scraper logs tailed to the newest line. The log re-renders every 2s
+    // (HTMX poll), which would otherwise reset scroll to the top — so after each
+    // swap we scroll any scraper log within the swapped content to the bottom.
+    document.body.addEventListener('htmx:afterSettle', function (e) {
+      var t = e.target;
+      if (!t || !t.querySelectorAll) return;
+      var logs = [];
+      if (t.classList && t.classList.contains('scraper-log')) logs.push(t);
+      t.querySelectorAll('.scraper-log').forEach(function (l) { logs.push(l); });
+      logs.forEach(function (l) { l.scrollTop = l.scrollHeight; });
+    });
+  </script>
 </body>
 </html>

@@ -12,26 +12,55 @@ body {
 a { color: #2563eb; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* ── Layout container (nav + content share the same left edge) ──
+   Full-width, left-aligned with a consistent gutter — no centered box, so wide
+   screens don't get big empty margins. */
+:root { --page-pad: 1.75rem; }
+
 /* ── Nav ─────────────────────────────────────────────────────── */
 nav {
-  background: #1e293b;
-  padding: 0 1.5rem;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 60%, #243349 100%);
+  height: 52px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 2px 8px rgba(0,0,0,.15);
+}
+.nav-inner {
+  margin: 0;
+  padding: 0 var(--page-pad);
+  height: 100%;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  height: 48px;
 }
-nav a { color: #cbd5e1; font-size: 14px; }
+nav a { color: #cbd5e1; font-size: 14px; padding: 5px 2px; transition: color .12s; }
 nav a:hover { color: #fff; text-decoration: none; }
-.nav-brand { font-weight: 700; font-size: 16px; color: #fff !important; margin-right: auto; }
+nav a.active {
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 #60a5fa;
+}
+.nav-brand {
+  font-weight: 800;
+  font-size: 16px;
+  color: #fff !important;
+  margin-right: auto;
+  letter-spacing: -0.01em;
+}
 
 /* ── Main layout ─────────────────────────────────────────────── */
-main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+main { margin: 0; padding: 1.25rem var(--page-pad) 2rem; }
 
-.page-header { margin-bottom: 1.25rem; }
-.page-header-row { display: flex; align-items: baseline; gap: 1rem; }
-.page-header h1 { font-size: 1.5rem; font-weight: 700; }
-.record-count { font-size: 13px; color: #64748b; font-weight: 500; }
+.page-header { margin-bottom: .9rem; }
+.page-header-row { display: flex; align-items: center; gap: .6rem; }
+.page-header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; color: #0f172a; }
+.record-count {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+  background: #e2e8f0;
+  padding: 2px 9px;
+  border-radius: 9999px;
+}
+.page-header > p { font-size: 13px; color: #64748b; margin-top: .25rem; }
 
 /* ── Filters ─────────────────────────────────────────────────── */
 .filters {
@@ -39,7 +68,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   flex-wrap: wrap;
   gap: 1rem;
   align-items: flex-end;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 .filters label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #64748b; }
 .filters select, .filters input { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
@@ -47,6 +76,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 /* ── Listings table ──────────────────────────────────────────── */
 .listings-table {
   width: 100%;
+  table-layout: fixed;            /* respect column widths; don't dump slack into Title */
   border-collapse: collapse;
   background: #fff;
   border-radius: 8px;
@@ -54,6 +84,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 .listings-table th {
+  position: relative;             /* anchor for the drag handle */
   background: #f8fafc;
   font-size: 11px;
   text-transform: uppercase;
@@ -63,7 +94,23 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   text-align: left;
   border-bottom: 1px solid #e2e8f0;
 }
-.listings-table td { padding: 6px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.listings-table td { padding: 6px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; overflow-wrap: anywhere; }
+.title-cell a { font-weight: 600; }
+
+/* Draggable column resizer — a thin grip on the right edge of each header cell */
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 2;
+}
+.col-resizer:hover { background: #94a3b8; }
+body.col-resizing { cursor: col-resize; user-select: none; }
+body.col-resizing a { pointer-events: none; }  /* don't trigger sort while dragging */
 .listings-table tr:last-child td { border-bottom: none; }
 .listings-table tr:hover td { background: #f8fafc; }
 
@@ -366,13 +413,28 @@ section h2 { font-size: 15px; font-weight: 600; margin-bottom: .75rem; color: #1
 
 .term-stats {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
 }
 .term-stat-detail { font-size: 11px; color: #64748b; }
 .term-stat-detail strong { color: #16a34a; }
+
+/* Per-term score grid, split by engine (Claude vs Local) */
+.term-engine-grid { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.term-engine-grid th {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #94a3b8;
+  text-align: right;
+  padding: 0 8px 2px;
+}
+.term-engine-grid td { font-size: 11px; color: #475569; text-align: right; padding: 1px 8px; }
+.term-engine-grid .eng-label { text-align: left; font-weight: 600; color: #334155; padding-right: 12px; }
+.term-engine-grid .eng-empty { text-align: left; font-style: italic; color: #94a3b8; }
+.term-engine-grid .term-avg { font-size: 11px; padding: 1px 8px; }
 
 /* Median / low / high spread, sits next to the avg badge */
 .term-score-spread {

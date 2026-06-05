@@ -340,9 +340,14 @@ This was a user-caught correctness requirement. Per-term average match score and
 Solution:
 - Table `term_jobs (term, job_id, UNIQUE(term, job_id))`. `link_term_job()` uses
   `INSERT OR IGNORE`, so each job is linked to a term **at most once**.
-- `term_score_stats(term)` computes `avg_score` and `distinct_found` **live from the
-  DB** via `JOIN jobs`, rather than from a running total. This is self-correcting: if a
-  job is re-scored from the detail page, the term's average updates automatically.
+- `term_score_stats(term)` computes stats **live from the DB** via `JOIN jobs`, rather
+  than from a running total. This is self-correcting: if a job is re-scored, the term's
+  numbers update automatically. It returns stats **split by engine** —
+  `{distinct_found, claude:{avg,median,low,high,scored}, local:{avg,median,low,high,scored}}`
+  — read from `match_score` (Claude) and `local_score` (local) respectively. The LinkedIn
+  Terms page renders these as a per-term two-row comparison grid (`_score_summary` builds
+  each engine's numbers; `engine_row` macro renders each row; empty engine → "not scored
+  yet"). `distinct_found` and the run-activity tallies stay engine-agnostic.
 - **What stays cumulative (correctly):** the per-run new/existing/skipped/reviewed
   event tallies in `linkedin_runs.json`. These are *run-activity* history, not job
   counts — watching "existing" climb tells you a term is going stale. Only the

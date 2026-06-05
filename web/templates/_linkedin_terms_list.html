@@ -1,3 +1,22 @@
+{% macro engine_row(label, s) %}
+  <tr>
+    <td class="eng-label">{{ label }}</td>
+    {% if s.get("scored") %}
+      <td>
+        <span class="term-avg score-{{ 'green' if s.avg >= 70 else 'yellow' if s.avg >= 40 else 'red' }}">
+          {{ s.avg | round(0) | int }}
+        </span>
+      </td>
+      <td>{{ s.median | round(0) | int }}</td>
+      <td>{{ s.low }}</td>
+      <td>{{ s.high }}</td>
+      <td>{{ s.scored }}</td>
+    {% else %}
+      <td colspan="5" class="eng-empty">not scored yet</td>
+    {% endif %}
+  </tr>
+{% endmacro %}
+
 {% if not terms %}
   <p class="empty">No search terms yet. Add one above.</p>
 {% else %}
@@ -54,21 +73,22 @@
           {% if run and run.get("totals") %}
             {% set t = run.totals %}
             {% set st = stats.get(term, {}) %}
-            {% set avg = st.get("avg_score") %}
-            {% set median = st.get("median_score") %}
-            {% set lo = st.get("min_score") %}
-            {% set hi = st.get("max_score") %}
             {% set found = st.get("distinct_found", 0) %}
+            {% set claude = st.get("claude", {}) %}
+            {% set local = st.get("local", {}) %}
             <div class="term-stats">
-              {% if avg is not none %}
-                <span class="term-avg score-{{ 'green' if avg >= 70 else 'yellow' if avg >= 40 else 'red' }}">
-                  avg match {{ avg | round(0) | int }}
-                </span>
-                <span class="term-score-spread">
-                  median {{ median | round(0) | int }}
-                  · low {{ lo }}
-                  · high {{ hi }}
-                </span>
+              {% if claude.get("scored") or local.get("scored") %}
+                <table class="term-engine-grid">
+                  <thead>
+                    <tr><th></th><th>avg</th><th>med</th><th>low</th><th>high</th><th>scored</th></tr>
+                  </thead>
+                  <tbody>
+                    {{ engine_row("Claude", claude) }}
+                    {{ engine_row("Local", local) }}
+                  </tbody>
+                </table>
+              {% else %}
+                <span class="term-stat-detail">no scores yet</span>
               {% endif %}
               <span class="term-stat-detail">
                 {{ found }} distinct job{{ 's' if found != 1 else '' }} found

@@ -105,6 +105,22 @@
 
 <form id="bulk-form">
 <table class="listings-table">
+  <colgroup>
+    <col style="width:3%"><!-- select -->
+    <col style="width:3%"><!-- APP -->
+    <col style="width:3%"><!-- RESP -->
+    <col style="width:3%"><!-- EXP -->
+    <col style="width:3%"><!-- HIDE -->
+    <col style="width:6%"><!-- Easy Apply -->
+    <col style="width:18%"><!-- Match (Claude) -->
+    <col style="width:18%"><!-- Match (Local) -->
+    <col style="width:8%"><!-- LinkedIn Match -->
+    <col style="width:12%"><!-- Title -->
+    <col style="width:9%"><!-- Company -->
+    <col style="width:6%"><!-- Location -->
+    <col style="width:5%"><!-- Source -->
+    <col style="width:5%"><!-- Fetched -->
+  </colgroup>
   <thead>
     <tr>
       <th title="Select"><input type="checkbox" id="select-all"></th>
@@ -199,7 +215,7 @@
           <span class="unscored-label">—</span>
         {% endif %}
       </td>
-      <td><a href="/jobs/{{ job.id }}">{{ job.title or '(untitled)' }}</a></td>
+      <td class="title-cell"><a href="/jobs/{{ job.id }}">{{ job.title or '(untitled)' }}</a></td>
       <td>{{ job.company or '—' }}</td>
       <td>{{ job.location or '—' }}</td>
       <td><span class="source-badge source-{{ job.source }}">{{ job.source }}</span></td>
@@ -232,6 +248,69 @@
     }
   });
   refresh();
+})();
+</script>
+
+<script>
+// Draggable column resizing — grips on each header, widths persisted to localStorage.
+(function () {
+  var table = document.querySelector('.listings-table');
+  if (!table) return;
+  var cols = table.querySelectorAll('colgroup col');
+  var ths  = table.querySelectorAll('thead th');
+  if (cols.length !== ths.length) return;
+  var STORE = 'jobscrape-colwidths';
+
+  // Restore any saved pixel widths.
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    Object.keys(saved).forEach(function (i) {
+      if (cols[i] && saved[i]) cols[i].style.width = saved[i] + 'px';
+    });
+  } catch (e) {}
+
+  function save() {
+    var out = {};
+    cols.forEach(function (c, i) {
+      var w = c.style.width;
+      if (w && w.indexOf('px') !== -1) out[i] = parseInt(w, 10);
+    });
+    try { localStorage.setItem(STORE, JSON.stringify(out)); } catch (e) {}
+  }
+
+  ths.forEach(function (th, i) {
+    var grip = document.createElement('span');
+    grip.className = 'col-resizer';
+    grip.title = 'Drag to resize · double-click to auto-fit';
+    th.appendChild(grip);
+
+    grip.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var startX = e.pageX;
+      var startW = ths[i].offsetWidth;
+      document.body.classList.add('col-resizing');
+      function onMove(ev) {
+        var w = Math.max(40, startW + (ev.pageX - startX));
+        cols[i].style.width = w + 'px';
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('col-resizing');
+        save();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    // Double-click a grip to reset that column to its default width.
+    grip.addEventListener('dblclick', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      cols[i].style.width = '';
+      save();
+    });
+    grip.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); });
+  });
 })();
 </script>
 

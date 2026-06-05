@@ -207,63 +207,55 @@ def link_term_job(term: str, job_id: int) -> None:
         )
 
 
+def _score_summary(scores: list[int]) -> dict:
+    """avg/median/low/high/scored for a sorted list of scores (empty-safe)."""
+    n = len(scores)
+    if n == 0:
+        return {"avg": None, "median": None, "low": None, "high": None, "scored": 0}
+    mid = n // 2
+    median = float(scores[mid]) if n % 2 else (scores[mid - 1] + scores[mid]) / 2
+    return {
+        "avg":    sum(scores) / n,
+        "median": median,
+        "low":    scores[0],
+        "high":   scores[-1],
+        "scored": n,
+    }
+
+
 def term_score_stats(term: str) -> dict:
     """
-    Compute live, dedup-safe stats for a term from the database:
-      - distinct_found: distinct jobs this term has ever surfaced
-      - scored_count:   how many of those have a match score
-      - avg_score:      average match score over distinct scored jobs (or None)
-      - median_score:   median match score over distinct scored jobs (or None)
-      - min_score:      lowest match score (or None)
-      - max_score:      highest match score (or None)
-
-    All metrics are computed over DISTINCT jobs (via the term_jobs association table),
-    so re-running a term never double-counts a job it already surfaced.
+    Live, dedup-safe per-term stats, split by scoring engine:
+      {
+        "distinct_found": int,                 # distinct jobs the term has surfaced
+        "claude": {avg, median, low, high, scored},  # from match_score
+        "local":  {avg, median, low, high, scored},  # from local_score
+      }
+    All metrics are over DISTINCT jobs (via the term_jobs association table), so
+    re-running a term never double-counts. Each engine's `scored` is independent
+    (a job may be scored by one engine, both, or neither).
     """
     with get_conn() as conn:
-        # distinct count (scored or not)
         distinct_found = conn.execute(
             "SELECT COUNT(*) AS c FROM term_jobs WHERE term = ?", (term,)
         ).fetchone()["c"]
-        # the actual scores, so we can compute median in Python
         rows = conn.execute(
             """
-            SELECT j.match_score AS s
+            SELECT j.match_score AS claude, j.local_score AS local
             FROM term_jobs tj
             JOIN jobs j ON j.id = tj.job_id
-            WHERE tj.term = ? AND j.match_score IS NOT NULL
-            ORDER BY j.match_score
+            WHERE tj.term = ?
             """,
             (term,),
         ).fetchall()
 
-    scores = [r["s"] for r in rows]
-    scored_count = len(scores)
-
-    if scored_count == 0:
-        return {
-            "distinct_found": distinct_found or 0,
-            "scored_count":   0,
-            "avg_score":      None,
-            "median_score":   None,
-            "min_score":      None,
-            "max_score":      None,
-        }
-
-    # median of the sorted list
-    mid = scored_count // 2
-    if scored_count % 2:
-        median = float(scores[mid])
-    else:
-        median = (scores[mid - 1] + scores[mid]) / 2
+    claude = sorted(r["claude"] for r in rows if r["claude"] is not None)
+    local  = sorted(r["local"]  for r in rows if r["local"]  is not None)
 
     return {
         "distinct_found": distinct_found or 0,
-        "scored_count":   scored_count,
-        "avg_score":      sum(scores) / scored_count,
-        "median_score":   median,
-        "min_score":      scores[0],
-        "max_score":      scores[-1],
+        "claude": _score_summary(claude),
+        "local":  _score_summary(local),
     }
 
 
