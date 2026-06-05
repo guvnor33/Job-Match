@@ -17,6 +17,9 @@
   <button type="submit" class="btn-primary">+ Add term</button>
 </form>
 
+<!-- Opt-in: backfill LinkedIn match assessment on existing jobs -->
+{% include "_backfill_toggle.html" %}
+
 <!-- Terms list -->
 <div id="terms-list">
   {% include "_linkedin_terms_list.html" %}

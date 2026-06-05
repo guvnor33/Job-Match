@@ -595,6 +595,7 @@ def _term_db_stats(terms: list[str]) -> dict:
 @app.get("/linkedin-terms")
 def linkedin_terms():
     from scrapers._config import get_linkedin_terms, get_linkedin_defaults, get_blacklist_companies
+    from app_settings import get_backfill_li_match
     terms = get_linkedin_terms()
     defaults = get_linkedin_defaults()
     with _term_scrapes_lock:
@@ -602,7 +603,15 @@ def linkedin_terms():
     return render_template("linkedin_terms.html",
                            terms=terms, defaults=defaults, states=states,
                            runs=_load_runs(), stats=_term_db_stats(terms),
-                           companies=get_blacklist_companies())
+                           companies=get_blacklist_companies(),
+                           backfill=get_backfill_li_match())
+
+
+@app.post("/settings/toggle-backfill-li")
+def toggle_backfill_li():
+    from app_settings import set_backfill_li_match
+    enabled = set_backfill_li_match("backfill_li_match" in request.form)
+    return render_template("_backfill_toggle.html", backfill=enabled)
 
 
 @app.post("/linkedin-terms/add")

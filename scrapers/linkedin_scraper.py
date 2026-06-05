@@ -179,27 +179,6 @@ _EASY_APPLY_JS = """
 """
 
 
-_LI_MATCH_JS = r"""
-() => {
-    // LinkedIn's own free profile/resume-match assessment, shown in the detail
-    // pane. Known sentences (all start with "Your profile" and mention
-    // "qualifications"), e.g.:
-    //   "Your profile and resume match the required qualifications well."
-    //   "Your profile is missing required qualifications."
-    // This card is rendered ASYNCHRONOUSLY and can take 3–7s (a spinner shows
-    // while it loads), so the caller polls this. We also report whether any
-    // loader/spinner is still on the page so the caller knows to keep waiting.
-    const body = document.body.innerText || '';
-    const m = body.match(/Your profile[^.\n]*qualifications[^.\n]*\./i);
-    const text = m ? m[0].replace(/\s+/g, ' ').trim() : '';
-    const loading = !!document.querySelector(
-        '.artdeco-loader, [class*="loader"], [role="progressbar"], svg.artdeco-spinner'
-    );
-    return { text: text, loading: loading };
-}
-"""
-
-
 def _clean_li_title(raw: str) -> str:
     """Strip LinkedIn aria-label noise like 'with verification' and trailing duplicates."""
     import re
@@ -463,10 +442,13 @@ async def _scrape_pages_by_clicking(page, *, base_url, max_results, term,
                                     dry_run, counts, now, log, stop_event=None) -> None:
     """Merged collect+process pass. For each search page, single-click each job
     card to load the right pane (where LinkedIn shows the match assessment), then
-    extract + store. Existing jobs are skipped WITHOUT clicking (faster, fewer
-    page interactions = safer)."""
-    from db.models import get_job_id_status, STATUS_APPLIED, link_term_job
+    extract + store. Existing jobs are NOT re-scored (saves API cost), but if a row
+    is missing LinkedIn's match assessment it IS clicked once to backfill it (free)."""
+    from db.models import (get_job_id_status, get_job, upsert_job,
+                           STATUS_APPLIED, link_term_job)
     from scrapers._config import is_blacklisted_title, is_blacklisted_company
+    from app_settings import get_backfill_li_match
+    backfill_li = get_backfill_li_match()   # opt-in: capture li_match on existing jobs
 
     seen: set[str] = set()
     start = 0
@@ -526,16 +508,28 @@ async def _scrape_pages_by_clicking(page, *, base_url, max_results, term,
                 i += 1
                 continue
 
-            # Already have it? Count + link, but DON'T re-open it (saves clicks/time).
+            # Already have it? Count + link, and skip the (paid) re-scoring. BUT if the
+            # row is missing LinkedIn's match assessment, click it to capture that —
+            # it's free (no API) and the "matches well" tier often shows on recurring
+            # existing jobs we'd otherwise never read. Once captured, future runs skip.
             existing = get_job_id_status(href)
             if existing:
                 job_id, status = existing
+                if backfill_li and not (get_job(job_id)["li_match"] or "").strip():
+                    await page.wait_for_timeout(random.randint(400, 900))
+                    if await _click_card(page, i, href, log, stop_event):
+                        _d, _e, li_match = await _extract_from_pane(page, log, stop_event)
+                        if li_match:
+                            upsert_job(source="linkedin", company=company, title=title,
+                                       location=None, url=href, description=None,
+                                       posted_at=None, fetched_at=now, li_match=li_match)
+                            log(f"  [li+]      {label} — assessment captured")
                 if status == STATUS_APPLIED:
                     counts["reviewed"] += 1
-                    log(f"  [REVIEWED] {label} — already applied, skipping")
+                    log(f"  [REVIEWED] {label} — already applied")
                 else:
                     counts["existing"] += 1
-                    log(f"  [EXISTS]   {label} — already in database, skipping")
+                    log(f"  [EXISTS]   {label} — already in database")
                 if term:
                     link_term_job(term, job_id)
                 i += 1

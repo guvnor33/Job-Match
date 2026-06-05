@@ -355,6 +355,23 @@ section h2 { font-size: 15px; font-weight: 600; margin-bottom: .75rem; color: #1
   font-size: 13px;
 }
 
+/* Backfill LinkedIn-match toggle */
+.backfill-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  flex-wrap: wrap;
+  padding: .55rem .85rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+.backfill-toggle.on { border-left: 4px solid #2563eb; background: #eff6ff; }
+.backfill-toggle label { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; }
+.backfill-hint { font-size: 11px; color: #64748b; }
+
 /* ── Company blacklist ───────────────────────────────────────── */
 .blacklist-section {
   margin-top: 2.5rem;

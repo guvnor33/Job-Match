@@ -1,0 +1,20 @@
+<div id="backfill-toggle" class="backfill-toggle {{ 'on' if backfill else '' }}">
+  <label>
+    <input type="checkbox" name="backfill_li_match"
+           {% if backfill %}checked{% endif %}
+           hx-post="/settings/toggle-backfill-li"
+           hx-trigger="change"
+           hx-target="#backfill-toggle"
+           hx-swap="outerHTML">
+    Backfill LinkedIn match on <strong>existing</strong> jobs
+  </label>
+  <span class="backfill-hint">
+    {% if backfill %}
+      On — scrapes also click already-saved jobs that lack an assessment to capture it
+      (free, no API). Slower &amp; more clicks; turn off once backfilled.
+    {% else %}
+      Off — scrapes only read new jobs. Turn on to capture LinkedIn's match text for
+      jobs already in your database (e.g. recurring “matches well” listings).
+    {% endif %}
+  </span>
+</div>

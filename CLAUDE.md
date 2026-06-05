@@ -215,8 +215,12 @@ reads description + Easy Apply + `li_match` from THAT pane. Key pieces:
   its own per-card "Easy Apply" badges and titles that would otherwise pollute
   detection. Easy Apply keys on the pane's `button.jobs-apply-button`.
 - **Cost/stealth optimization:** existing jobs (checked via `get_job_id_status(url)`)
-  are counted + term-linked but NOT clicked/re-opened — fewer interactions = faster and
-  more human. Only genuinely new jobs get a click + pane read + (optional) scoring.
+  are counted + term-linked and NOT re-scored (saves API), and by default not re-clicked.
+  **Opt-in backfill:** when `backfill_li_match` (settings.toml, default off, toggle on the
+  LinkedIn Terms page) is ON, existing rows MISSING `li_match` get clicked once to capture
+  LinkedIn's assessment (free, no API) — because the "matches well" tier often appears on
+  recurring/existing jobs that would otherwise never be read. Once captured they're skipped
+  again. Only genuinely new jobs get scored.
 - Both `scrape_async` (bulk, term=None) and `_scrape_one_term_async` (per-term) call the
   same helper. `_fetch_description` (the old standalone-page fetcher) was removed. `upsert_job` backfills it onto existing rows that lack it (free, no API).
 Surfaced as a sortable "LinkedIn Match" column with a colored badge (`_li_match_badge`:

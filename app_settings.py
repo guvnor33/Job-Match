@@ -25,11 +25,14 @@ _DEFAULTS = {
     "rationale_detail":     "detailed",                    # "brief" | "standard" | "detailed"
     "local_base_url":       "http://localhost:11434/v1",   # Ollama default; LM Studio = :1234/v1
     "local_model":          "llama3.1",
+    # When on, the LinkedIn scraper also clicks EXISTING jobs that lack LinkedIn's
+    # match assessment to backfill it (free, no API) — at the cost of more clicks.
+    "backfill_li_match":    False,
 }
 
 # Order the keys are written to the [scoring] table.
 _KEYS = ("scoring_enabled", "auto_score_on_ingest", "scoring_backend", "claude_model",
-         "rationale_detail", "local_base_url", "local_model")
+         "rationale_detail", "local_base_url", "local_model", "backfill_li_match")
 
 
 def _read_toml() -> dict:
@@ -133,6 +136,18 @@ def get_auto_score_on_ingest() -> bool:
 
 def get_claude_model() -> str:
     return _load().get("claude_model") or _DEFAULTS["claude_model"]
+
+
+def get_backfill_li_match() -> bool:
+    return bool(_load().get("backfill_li_match", False))
+
+
+def set_backfill_li_match(value: bool) -> bool:
+    with _lock:
+        data = _load()
+        data["backfill_li_match"] = bool(value)
+        _write(data)
+    return bool(value)
 
 
 def get_local_llm() -> dict:
